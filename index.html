@@ -37,6 +37,7 @@ button {
   background:#3b82f6;
   color:white;
   font-size:16px;
+  cursor:pointer;
 }
 .grid {
   display:grid;
@@ -73,9 +74,9 @@ button {
 
 <div class="container" id="login">
   <h2>🧠 Memory Game</h2>
-  <input id="name" placeholder="Your name">
-  <input id="room" placeholder="Room name">
-  <input id="pass" placeholder="Room password">
+  <input id="playerName" placeholder="Your name">
+  <input id="roomName" placeholder="Room name">
+  <input id="roomPass" placeholder="Room password">
   <button onclick="createRoom()">Create Game</button>
   <button onclick="joinRoom()">Join Game</button>
 </div>
@@ -84,6 +85,7 @@ button {
   <h3 id="roomTitle"></h3>
   ⏱ Time: <span id="time">120</span>s
   <div class="grid" id="grid"></div>
+
   <h4>🏆 Scores</h4>
   <div id="scores"></div>
 
@@ -116,18 +118,26 @@ const db = firebase.database();
 
 const icons = ['🍎','🍌','🍇','🍒','🍉','🥝','🍍','🥥'];
 
-let user, roomCode, isHost=false;
+let user="", roomCode="", isHost=false;
 let first=null, lock=false;
 let timerStarted=false;
 
 function shuffle(a){ return a.sort(()=>Math.random()-0.5); }
 
 function createRoom(){
-  user=name.value; roomCode=room.value;
-  if(!user||!roomCode) return alert("Fill all");
-  isHost=true;
+  user = playerName.value.trim();
+  roomCode = roomName.value.trim();
+  const pass = roomPass.value;
+
+  if(!user || !roomCode){
+    alert("Fill all fields");
+    return;
+  }
+
+  isHost = true;
+
   db.ref("rooms/"+roomCode).set({
-    pass:pass.value,
+    pass,
     host:user,
     cards:shuffle([...icons,...icons]),
     open:[],
@@ -136,14 +146,23 @@ function createRoom(){
     state:"playing",
     chat:[]
   });
+
   startGame();
 }
 
 function joinRoom(){
-  user=name.value; roomCode=room.value;
+  user = playerName.value.trim();
+  roomCode = roomName.value.trim();
+  const pass = roomPass.value;
+
+  if(!user || !roomCode){
+    alert("Fill all fields");
+    return;
+  }
+
   db.ref("rooms/"+roomCode).once("value",s=>{
     if(!s.exists()) return alert("Room not found");
-    if(s.val().pass!==pass.value) return alert("Wrong password");
+    if(s.val().pass !== pass) return alert("Wrong password");
     startGame();
   });
 }
@@ -151,7 +170,7 @@ function joinRoom(){
 function startGame(){
   login.classList.add("hidden");
   game.classList.remove("hidden");
-  roomTitle.innerText="Room: "+roomCode;
+  roomTitle.innerText = "Room: " + roomCode;
 
   db.ref("rooms/"+roomCode).on("value",s=>{
     const d=s.val(); if(!d) return;
@@ -176,7 +195,8 @@ function startGame(){
   if(isHost && !timerStarted){
     timerStarted=true;
     setInterval(()=>{
-      db.ref("rooms/"+roomCode+"/time").transaction(t=>t>0?t-1:0);
+      db.ref("rooms/"+roomCode+"/time")
+        .transaction(t=>t>0?t-1:0);
     },1000);
   }
 }
@@ -188,23 +208,30 @@ function render(cards,open){
     c.className="card";
     if(open.includes(i)) c.classList.add("open");
     c.innerText=icon;
-    c.onclick=()=>flip(i,icon,c,open);
+    c.onclick=()=>flip(i,icon,open);
     grid.appendChild(c);
   });
 }
 
-function flip(i,icon,card,open){
+function flip(i,icon,open){
   if(lock||open.includes(i)) return;
-  card.classList.add("open");
-  if(!first){ first={i,icon}; return; }
+
+  if(!first){
+    first={i,icon};
+    return;
+  }
 
   if(first.icon===icon){
-    db.ref(`rooms/${roomCode}/open`).set([...open,first.i,i]);
-    db.ref(`rooms/${roomCode}/scores/${user}`).transaction(v=>(v||0)+1);
+    db.ref("rooms/"+roomCode+"/open").set([...open,first.i,i]);
+    db.ref("rooms/"+roomCode+"/scores/"+user)
+      .transaction(v=>(v||0)+1);
     first=null;
   } else {
     lock=true;
-    setTimeout(()=>{ lock=false; first=null; },700);
+    setTimeout(()=>{
+      lock=false;
+      first=null;
+    },700);
   }
 }
 
