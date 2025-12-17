@@ -1,426 +1,72 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-<meta charset="UTF-8">
-<meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>1v1 Memory Race</title>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>1v1 Memory Race</title>
+    
+    <link rel="stylesheet" href="style.css">
 
-<script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-app-compat.js"></script>
-<script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-database-compat.js"></script>
-
-<style>
-/* --- CORE STYLES --- */
-body { margin:0; font-family:'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; background:#0f172a; color:white; display:flex; justify-content:center; align-items:center; min-height:100vh; }
-.container { background:#1e293b; padding:20px; border-radius:12px; width:95%; max-width:500px; box-shadow: 0 10px 15px -3px rgba(0, 0, 0, 0.5); position: relative; }
-h2, h3, h4 { margin-top:0; text-align:center; }
-
-/* --- INPUTS & BUTTONS --- */
-input, button { width:100%; padding:12px; margin-top:10px; border-radius:8px; border:none; box-sizing: border-box; outline:none; }
-input { background: #334155; color: white; border: 1px solid #475569; }
-input:focus { border-color: #3b82f6; }
-button { background:#3b82f6; color:white; font-size:16px; cursor:pointer; font-weight:bold; transition: background 0.2s; }
-button:hover { background:#2563eb; }
-button.secondary { background: #ef4444; }
-button:disabled { background: #64748b; cursor: not-allowed; }
-
-/* --- GAME ELEMENTS --- */
-.lobby-box { text-align:center; padding: 40px 20px; animation: pulse 2s infinite; }
-@keyframes pulse { 0% { opacity: 1; } 50% { opacity: 0.6; } 100% { opacity: 1; } }
-
-.grid { display:grid; grid-template-columns:repeat(4,1fr); gap:8px; margin-top:15px; }
-.card {
-  aspect-ratio:1; background:#334155; border-radius:8px; display:flex;
-  justify-content:center; align-items:center; font-size:32px; cursor:pointer;
-  transition: all 0.2s; user-select: none; border: 2px solid #475569;
-}
-.card:active { transform: scale(0.95); }
-.card.flipped { background:#fff; border-color:white; transform: rotateY(180deg); }
-.card.matched { background:#22c55e; border-color:#22c55e; cursor:default; opacity: 0.8; }
-.hidden { display:none !important; }
-
-/* --- HUD & SCORES --- */
-.hud { display:flex; justify-content:space-between; align-items:center; background:#0f172a; padding:10px; border-radius:8px; margin-bottom:10px; }
-.score-badge { font-size: 14px; padding: 5px 10px; border-radius: 4px; background: #334155; }
-.score-badge.active { border: 1px solid #3b82f6; color: #3b82f6; }
-
-/* --- CHAT --- */
-.chat-section { margin-top: 20px; border-top: 1px solid #334155; padding-top: 10px; }
-.chat-box { background:#0f172a; height:100px; overflow-y:auto; padding:10px; margin-top:5px; border-radius:6px; display:flex; flex-direction:column; gap:5px; font-size:13px; }
-.chat-msg { word-break: break-word; }
-
-/* --- WIN/LOSE OVERLAY --- */
-.overlay {
-    position: absolute; top:0; left:0; width:100%; height:100%;
-    background: rgba(15, 23, 42, 0.95);
-    border-radius:12px;
-    display:flex; flex-direction:column; justify-content:center; align-items:center;
-    z-index: 10;
-}
-.result-title { font-size: 3rem; margin-bottom: 10px; text-transform: uppercase; text-shadow: 0 4px 10px rgba(0,0,0,0.5); }
-.won { color: #4ade80; }
-.lost { color: #ef4444; }
-</style>
+    <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-app-compat.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-database-compat.js"></script>
 </head>
 
 <body>
 
-<div class="container" id="login">
-  <h2>⚔️ 1v1 Memory Race</h2>
-  <p style="text-align:center; color:#94a3b8; font-size:14px;">First to find 8 pairs wins!</p>
-  <input id="playerName" placeholder="Your Nickname" maxlength="10">
-  <input id="roomName" placeholder="Room Name">
-  <input id="roomPass" placeholder="Room Password" type="password">
-  <div style="display:grid; grid-template-columns: 1fr 1fr; gap:10px; margin-top:10px;">
-      <button onclick="createRoom()">Create Room</button>
-      <button onclick="joinRoom()" style="background:#8b5cf6; margin-top:0;">Join Room</button>
-  </div>
-</div>
-
-<div class="container hidden" id="game">
-  <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:15px;">
-    <h3 style="margin:0" id="roomTitle">Room</h3>
-    <button onclick="copyCode()" style="width:auto; padding:5px 12px; margin:0; font-size:12px;">Copy Name</button>
-  </div>
-
-  <div id="lobby" class="hidden lobby-box">
-    <h3>⏳ Waiting for Opponent...</h3>
-    <p>Tell your friend to join room: <b id="lobbyRoomName"></b></p>
-  </div>
-
-  <div id="gameArea" class="hidden">
-    <div class="hud">
-        <div id="myScoreEl" class="score-badge active">You: 0</div>
-        <div style="font-weight:bold; color:#fbbf24">TARGET: 8</div>
-        <div id="opScoreEl" class="score-badge">Opponent: 0</div>
+    <div class="container" id="login">
+        <h2>⚔️ 1v1 Memory Race</h2>
+        <p class="subtitle">First to find 8 pairs wins!</p>
+        
+        <input id="playerName" placeholder="Your Nickname" maxlength="10">
+        <input id="roomName" placeholder="Room Name">
+        <input id="roomPass" placeholder="Room Password" type="password">
+        
+        <div class="btn-group">
+            <button onclick="createRoom()">Create Room</button>
+            <button onclick="joinRoom()" class="btn-join">Join Room</button>
+        </div>
     </div>
-    
-    <div class="grid" id="grid"></div>
-  </div>
 
-  <div class="chat-section">
-    <div class="chat-box" id="chat"></div>
-    <input id="chatInput" placeholder="Type message..." onkeydown="sendChat(event)" style="margin-top:5px; padding:8px;">
-  </div>
+    <div class="container hidden" id="game">
+        <div class="header-row">
+            <h3 id="roomTitle">Room</h3>
+            <button onclick="copyCode()" class="btn-small">Copy Name</button>
+        </div>
 
-  <div id="endScreen" class="overlay hidden">
-      <h1 id="endTitle" class="result-title"></h1>
-      <p id="endMessage" style="font-size:18px; margin-bottom:20px;"></p>
-      
-      <div id="hostControls" class="hidden" style="width: 80%;">
-          <button onclick="restartGame()">🔄 Rematch</button>
-          <button onclick="closeRoom()" class="secondary">❌ Close Room</button>
-      </div>
-      <div id="waitControls" class="hidden">
-          <p>Waiting for host to restart...</p>
-      </div>
-  </div>
-</div>
+        <div id="lobby" class="hidden lobby-box">
+            <h3>⏳ Waiting for Opponent...</h3>
+            <p>Tell your friend to join room: <b id="lobbyRoomName"></b></p>
+        </div>
 
-<script>
-// --- CONFIGURATION ---
-const firebaseConfig = {
-  apiKey: "AIzaSyB5DEX0fuSjTud04-mR__GDpiu1-vk9SIY",
-  authDomain: "memory-game-66dad.firebaseapp.com",
-  databaseURL: "https://memory-game-66dad-default-rtdb.europe-west1.firebasedatabase.app",
-  projectId: "memory-game-66dad",
-  storageBucket: "memory-game-66dad.firebasestorage.app",
-  messagingSenderId: "94001818458",
-  appId: "1:94001818458:web:95184599a49e78d286e163"
-};
-
-if (!firebase.apps.length) firebase.initializeApp(firebaseConfig);
-const db = firebase.database();
-
-const icons = ['🍎','🍌','🍇','🍒','🍉','🥝','🍍','🥥']; // 8 Pairs
-let user = "", roomCode = "", isHost = false;
-let dbRef = null;
-
-// Local Game State (Not sent to DB immediately)
-let localCards = []; 
-let localMatched = []; // Indexes of matched cards
-let firstCard = null;
-let isLocked = false;
-let myScore = 0;
-
-// --- HELPERS ---
-function shuffle(array) { return array.sort(() => Math.random() - 0.5); }
-function getEl(id) { return document.getElementById(id); }
-function getInputs() {
-  return {
-    name: getEl("playerName").value.trim(),
-    room: getEl("roomName").value.trim(),
-    pass: getEl("roomPass").value.trim()
-  };
-}
-
-// --- LOBBY LOGIC ---
-function createRoom(){
-  const i = getInputs();
-  if(!i.name || !i.room) return alert("Fill in name and room");
-
-  user = i.name;
-  roomCode = i.room;
-  isHost = true;
-
-  // Initialize Room
-  db.ref("rooms/"+roomCode).set({
-    pass: i.pass,
-    host: user,
-    cards: shuffle([...icons, ...icons]), // Shared board layout
-    state: "waiting", 
-    winner: "",
-    players: {
-        [user]: { score: 0 }
-    }
-  });
-  
-  enterGameScreen();
-}
-
-function joinRoom(){
-  const i = getInputs();
-  if(!i.name || !i.room) return alert("Fill in name and room");
-
-  user = i.name;
-  roomCode = i.room;
-
-  db.ref("rooms/"+roomCode).once("value", s => {
-    if(!s.exists()) return alert("Room does not exist");
-    const val = s.val();
-
-    if(val.pass !== i.pass) return alert("Wrong password");
-    
-    // Check if full (Max 2)
-    const pCount = val.players ? Object.keys(val.players).length : 0;
-    if(pCount >= 2 && !val.players[user]) return alert("Room is full!");
-
-    // Add Player
-    db.ref("rooms/"+roomCode+"/players/"+user).update({ score: 0 });
-    enterGameScreen();
-  });
-}
-
-function enterGameScreen() {
-  getEl("login").classList.add("hidden");
-  getEl("game").classList.remove("hidden");
-  getEl("roomTitle").innerText = "Room: " + roomCode;
-  getEl("lobbyRoomName").innerText = roomCode;
-  
-  dbRef = db.ref("rooms/"+roomCode);
-
-  // --- MAIN LISTENER ---
-  dbRef.on("value", snapshot => {
-    const data = snapshot.val();
-    if(!data) { alert("Room closed by host"); location.reload(); return; }
-
-    // 1. Check Player Count to Start Game
-    const players = data.players || {};
-    const playerNames = Object.keys(players);
-
-    if (isHost && data.state === "waiting" && playerNames.length === 2) {
-        dbRef.update({ state: "playing" });
-    }
-
-    // 2. Manage Screens (Lobby vs Game)
-    if (data.state === "waiting") {
-        getEl("lobby").classList.remove("hidden");
-        getEl("gameArea").classList.add("hidden");
-        getEl("endScreen").classList.add("hidden");
-    } else if (data.state === "playing") {
-        getEl("lobby").classList.add("hidden");
-        getEl("gameArea").classList.remove("hidden");
-        getEl("endScreen").classList.add("hidden");
-
-        // Initialize Local Board ONLY if not done yet
-        if(localCards.length === 0) {
-            setupLocalBoard(data.cards);
-        }
-    } else if (data.state === "ended") {
-        showEndScreen(data.winner);
-    }
-
-    // 3. Update Scores UI (Realtime from DB)
-    updateScoresUI(players);
-
-    // 4. Chat
-    renderChat(data.chat || {});
-  });
-}
-
-// --- GAME LOGIC (LOCAL) ---
-function setupLocalBoard(cardIcons) {
-    localCards = cardIcons;
-    localMatched = []; // Reset matches
-    firstCard = null;
-    isLocked = false;
-    myScore = 0;
-    
-    const grid = getEl("grid");
-    grid.innerHTML = ""; // Clear existing
-
-    localCards.forEach((icon, index) => {
-        const card = document.createElement("div");
-        card.className = "card";
-        card.dataset.index = index;
-        card.onclick = () => handleCardClick(card, icon, index);
-        grid.appendChild(card);
-    });
-}
-
-function handleCardClick(cardDiv, icon, index) {
-    // Prevent clicking if locked, already matched, or clicking same card
-    if (isLocked || localMatched.includes(index) || cardDiv.classList.contains("flipped")) return;
-
-    // Flip Visuals
-    cardDiv.classList.add("flipped");
-    cardDiv.innerText = icon;
-
-    if (!firstCard) {
-        // First card of the pair
-        firstCard = { index, icon, el: cardDiv };
-    } else {
-        // Second card
-        isLocked = true; // Block input while checking
-
-        if (firstCard.icon === icon) {
-            // MATCH!
-            localMatched.push(firstCard.index);
-            localMatched.push(index);
+        <div id="gameArea" class="hidden">
+            <div class="hud">
+                <div id="myScoreEl" class="score-badge active">You: 0</div>
+                <div class="target-score">TARGET: 8</div>
+                <div id="opScoreEl" class="score-badge">Opponent: 0</div>
+            </div>
             
-            // Visual Update
-            firstCard.el.classList.add("matched");
-            cardDiv.classList.add("matched");
+            <div class="grid" id="grid"></div>
+        </div>
+
+        <div class="chat-section">
+            <div class="chat-box" id="chat"></div>
+            <input id="chatInput" placeholder="Type message..." onkeydown="sendChat(event)">
+        </div>
+
+        <div id="endScreen" class="overlay hidden">
+            <h1 id="endTitle" class="result-title"></h1>
+            <p id="endMessage" class="result-msg"></p>
             
-            // Update Score in DB
-            myScore++;
-            dbRef.child("players/"+user).update({ score: myScore });
+            <div id="hostControls" class="hidden controls-wrapper">
+                <button onclick="restartGame()" id="btnRematch">🔄 Rematch</button>
+                <button onclick="closeRoom()" class="secondary">❌ Close Room</button>
+            </div>
+            <div id="waitControls" class="hidden">
+                <p>Waiting for host to restart...</p>
+            </div>
+        </div>
+    </div>
 
-            // CHECK WIN CONDITION
-            if (myScore === 8) {
-                dbRef.update({ 
-                    state: "ended",
-                    winner: user
-                });
-            }
-
-            // Reset Turn
-            firstCard = null;
-            isLocked = false;
-
-        } else {
-            // NO MATCH
-            setTimeout(() => {
-                // Flip back
-                firstCard.el.classList.remove("flipped");
-                firstCard.el.innerText = "";
-                cardDiv.classList.remove("flipped");
-                cardDiv.innerText = "";
-                
-                firstCard = null;
-                isLocked = false;
-            }, 800);
-        }
-    }
-}
-
-// --- UI UPDATES ---
-function updateScoresUI(players) {
-    // Determine which score is mine and which is opponent
-    let opName = "Opponent";
-    let opScore = 0;
-
-    Object.entries(players).forEach(([pName, pData]) => {
-        if(pName === user) {
-            getEl("myScoreEl").innerText = `You: ${pData.score}`;
-        } else {
-            opName = pName;
-            opScore = pData.score;
-        }
-    });
-
-    getEl("opScoreEl").innerText = `${opName}: ${opScore}`;
-}
-
-function showEndScreen(winnerName) {
-    const screen = getEl("endScreen");
-    const title = getEl("endTitle");
-    const msg = getEl("endMessage");
-
-    screen.classList.remove("hidden");
-
-    if (winnerName === user) {
-        title.innerText = "YOU WON! 🏆";
-        title.className = "result-title won";
-        msg.innerText = "Great memory! You finished first.";
-    } else {
-        title.innerText = "YOU LOST 💀";
-        title.className = "result-title lost";
-        msg.innerText = `${winnerName} finished before you.`;
-    }
-
-    if(isHost) {
-        getEl("hostControls").classList.remove("hidden");
-        getEl("waitControls").classList.add("hidden");
-    } else {
-        getEl("hostControls").classList.add("hidden");
-        getEl("waitControls").classList.remove("hidden");
-    }
-}
-
-// --- HOST CONTROLS ---
-function restartGame() {
-    if(!isHost) return;
-    
-    // Reset DB for new game
-    dbRef.update({
-        cards: shuffle([...icons, ...icons]), // New shuffle
-        state: "playing",
-        winner: "",
-        chat: {} // Optional: Clear chat
-    });
-
-    // Reset all players scores to 0
-    dbRef.child("players").once("value", s => {
-        s.forEach(p => {
-            p.ref.update({ score: 0 });
-        });
-    });
-    
-    // Important: Force local reset (Logic handles this in listener)
-    localCards = []; 
-}
-
-function closeRoom() {
-    if(confirm("Close this room for everyone?")) {
-        dbRef.remove();
-        location.reload();
-    }
-}
-
-// --- CHAT ---
-function renderChat(chatData) {
-  const chatBox = getEl("chat");
-  chatBox.innerHTML = "";
-  Object.values(chatData).forEach(msg => {
-    const div = document.createElement("div");
-    div.className = "chat-msg";
-    div.innerText = msg;
-    chatBox.appendChild(div);
-  });
-  chatBox.scrollTop = chatBox.scrollHeight;
-}
-
-function sendChat(e) {
-  if(e.key !== "Enter" || !e.target.value.trim()) return;
-  db.ref("rooms/"+roomCode+"/chat").push(`${user}: ${e.target.value}`);
-  e.target.value = "";
-}
-
-function copyCode() {
-    navigator.clipboard.writeText(roomCode);
-    alert("Room name copied!");
-}
-</script>
-
+    <script src="script.js"></script>
 </body>
 </html>
