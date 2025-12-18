@@ -1,17 +1,20 @@
-body { margin: 0; font-family: sans-serif; background: #0f172a; color: white; display: flex; justify-content: center; align-items: center; min-height: 100vh; }
+body { margin: 0; font-family: 'Segoe UI', sans-serif; background: #0f172a; color: white; display: flex; justify-content: center; align-items: center; min-height: 100vh; }
 .container { background: #1e293b; padding: 20px; border-radius: 12px; width: 90%; max-width: 450px; box-shadow: 0 10px 20px rgba(0,0,0,0.5); position: relative; }
 .hidden { display: none !important; }
-input, button { width: 100%; padding: 12px; margin-top: 10px; border-radius: 8px; border: none; box-sizing: border-box; }
-input { background: #334155; color: white; }
-button { background: #3b82f6; color: white; cursor: pointer; font-weight: bold; }
+input, button { width: 100%; padding: 12px; margin-top: 10px; border-radius: 8px; border: none; box-sizing: border-box; font-size: 1rem; }
+input { background: #334155; color: white; border: 1px solid #475569; }
+button { background: #3b82f6; color: white; cursor: pointer; font-weight: bold; transition: 0.2s; }
+button:hover { background: #2563eb; }
 button.btn-join { background: #8b5cf6; }
 .grid { display: grid; grid-template-columns: repeat(4, 1fr); gap: 10px; margin-top: 20px; }
-.card { aspect-ratio: 1; background: #334155; border-radius: 8px; display: flex; justify-content: center; align-items: center; font-size: 2rem; cursor: pointer; transition: 0.2s; border: 2px solid #475569; }
+.card { aspect-ratio: 1; background: #334155; border-radius: 8px; display: flex; justify-content: center; align-items: center; font-size: 2rem; cursor: pointer; transition: 0.2s; border: 2px solid #475569; user-select: none; }
 .card.flipped { background: white; color: black; transform: rotateY(180deg); }
-.card.matched { background: #22c55e !important; border-color: #22c55e; cursor: default; }
-.hud { display: flex; justify-content: space-between; align-items: center; margin-bottom: 10px; }
-.score-badge { padding: 5px 10px; background: #334155; border-radius: 5px; }
+.card.matched { background: #22c55e !important; border-color: #22c55e; cursor: default; opacity: 0.7; }
+.hud { display: flex; justify-content: space-between; align-items: center; margin-bottom: 15px; background: #0f172a; padding: 10px; border-radius: 8px; }
+.score-badge { padding: 5px 10px; background: #334155; border-radius: 5px; font-size: 0.9rem; }
+.score-badge.active { border: 1px solid #3b82f6; }
 .timer-box { font-family: monospace; color: #fbbf24; font-size: 1.2rem; }
-.overlay { position: absolute; inset: 0; background: rgba(15,23,42,0.95); display: flex; flex-direction: column; justify-content: center; align-items: center; z-index: 100; border-radius: 12px; }
+.overlay { position: absolute; inset: 0; background: rgba(15,23,42,0.98); display: flex; flex-direction: column; justify-content: center; align-items: center; z-index: 100; border-radius: 12px; }
+.result-title { font-size: 2.5rem; margin-bottom: 10px; }
 .won { color: #4ade80; } .lost { color: #f87171; }
-.chat-box { background: #0f172a; height: 80px; overflow-y: auto; padding: 5px; border-radius: 5px; font-size: 0.8rem; margin-top: 15px; }
+.chat-box { background: #0f172a; height: 80px; overflow-y: auto; padding: 8px; border-radius: 5px; font-size: 0.85rem; margin-top: 15px; border: 1px solid #334155; }
