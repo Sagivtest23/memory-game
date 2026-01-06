@@ -7,12 +7,27 @@
     <link rel="stylesheet" href="style.css">
     <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-app-compat.js"></script>
     <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-database-compat.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-auth-compat.js"></script>
 </head>
 <body>
-    <div class="container" id="login">
+
+    <div class="container" id="auth-screen">
+        <h2 id="auth-title">Create Account</h2>
+        <input id="authEmail" placeholder="Email" type="email">
+        <input id="authPass" placeholder="Password" type="password">
+        <input id="authNick" placeholder="Nickname (for new users)">
+        
+        <button id="authBtn" onclick="handleAuth()">Sign Up</button>
+        <p class="toggle-text" onclick="toggleAuthMode()">Already have an account? <span id="toggle-link">Login</span></p>
+    </div>
+
+    <div class="container hidden" id="login">
+        <div class="user-info">
+            <span id="welcomeText"></span>
+            <button onclick="logout()" class="btn-text">Logout</button>
+        </div>
         <h2>⚔️ 1v1 Memory Race</h2>
         <p class="subtitle">First to find 8 pairs wins!</p>
-        <input id="playerName" placeholder="Your Nickname" maxlength="10">
         <input id="roomName" placeholder="Room Name">
         <input id="roomPass" placeholder="Room Password" type="password">
         <div class="btn-group">
@@ -58,6 +73,7 @@
             </div>
         </div>
     </div>
+    
     <script src="script.js"></script>
 </body>
 </html>

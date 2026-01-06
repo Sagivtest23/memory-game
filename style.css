@@ -6,6 +6,13 @@ input { background: #334155; color: white; border: 1px solid #475569; }
 button { background: #3b82f6; color: white; cursor: pointer; font-weight: bold; transition: 0.2s; }
 button:hover { background: #2563eb; }
 button.btn-join { background: #8b5cf6; }
+
+/* Auth Styling */
+.toggle-text { font-size: 0.85rem; text-align: center; margin-top: 15px; color: #94a3b8; cursor: pointer; }
+.toggle-text span { color: #3b82f6; text-decoration: underline; }
+.user-info { display: flex; justify-content: space-between; align-items: center; font-size: 0.8rem; color: #94a3b8; margin-bottom: 10px; }
+.btn-text { width: auto; padding: 4px 8px; margin: 0; background: transparent; color: #f87171; font-size: 0.75rem; border: 1px solid #f87171; }
+
 .grid { display: grid; grid-template-columns: repeat(4, 1fr); gap: 10px; margin-top: 20px; }
 .card { aspect-ratio: 1; background: #334155; border-radius: 8px; display: flex; justify-content: center; align-items: center; font-size: 2rem; cursor: pointer; transition: 0.2s; border: 2px solid #475569; user-select: none; }
 .card.flipped { background: white; color: black; transform: rotateY(180deg); }

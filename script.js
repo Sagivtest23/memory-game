@@ -11,24 +11,62 @@ const firebaseConfig = {
 
 if (!firebase.apps.length) firebase.initializeApp(firebaseConfig);
 const db = firebase.database();
+const auth = firebase.auth();
 
 const icons = ['🍎','🍌','🍇','🍒','🍉','🥝','🍍','🥥'];
-let user = "";
+let user = ""; // This will hold the nickname
 let roomCode = "";
 let isHost = false;
 let dbRef = null;
 
-let localCards = []; 
-let localMatched = []; 
-let firstCard = null;
-let isLocked = false;
-let myScore = 0;
-let lastCardsString = ""; 
+// --- AUTH LOGIC ---
+let isLoginMode = false;
 
-let timerInterval = null;
-let seconds = 0;
+function toggleAuthMode() {
+    isLoginMode = !isLoginMode;
+    getEl("auth-title").innerText = isLoginMode ? "Login" : "Create Account";
+    getEl("authBtn").innerText = isLoginMode ? "Login" : "Sign Up";
+    getEl("authNick").classList.toggle("hidden", isLoginMode);
+    getEl("toggle-link").innerText = isLoginMode ? "Sign Up" : "Login";
+}
 
-// --- AUDIO ---
+async function handleAuth() {
+    const email = getEl("authEmail").value;
+    const pass = getEl("authPass").value;
+    const nick = getEl("authNick").value;
+
+    try {
+        if (isLoginMode) {
+            await auth.signInWithEmailAndPassword(email, pass);
+        } else {
+            if (!nick) return alert("Please enter a nickname");
+            const res = await auth.createUserWithEmailAndPassword(email, pass);
+            await res.user.updateProfile({ displayName: nick });
+            location.reload(); // Refresh to update user state
+        }
+    } catch (err) {
+        alert(err.message);
+    }
+}
+
+function logout() {
+    auth.signOut().then(() => location.reload());
+}
+
+// Listen for User State (The "Brain" of the Auth system)
+auth.onAuthStateChanged((firebaseUser) => {
+    if (firebaseUser) {
+        user = firebaseUser.displayName || "Player";
+        getEl("auth-screen").classList.add("hidden");
+        getEl("login").classList.remove("hidden");
+        getEl("welcomeText").innerText = "Hi, " + user;
+    } else {
+        getEl("auth-screen").classList.remove("hidden");
+        getEl("login").classList.add("hidden");
+    }
+});
+
+// --- CORE GAME LOGIC ---
 const audioCtx = new (window.AudioContext || window.webkitAudioContext)();
 function playSound(type) {
     const osc = audioCtx.createOscillator();
@@ -46,30 +84,15 @@ function playSound(type) {
     }
 }
 
-// --- SESSION ---
-function saveSession() { sessionStorage.setItem("memGameSession", JSON.stringify({ user, roomCode, isHost })); }
-function getSession() { const data = sessionStorage.getItem("memGameSession"); return data ? JSON.parse(data) : null; }
-
-window.onload = () => {
-    const session = getSession();
-    if (session) {
-        user = session.user; roomCode = session.roomCode; isHost = session.isHost;
-        enterGameScreen();
-    }
-};
-
-// --- CORE ---
-function shuffle(array) { return array.sort(() => Math.random() - 0.5); }
+function shuffle(array) { return [...array].sort(() => Math.random() - 0.5); }
 function getEl(id) { return document.getElementById(id); }
 
 function createRoom(){
-    const name = getEl("playerName").value.trim();
     const room = getEl("roomName").value.trim();
     const pass = getEl("roomPass").value.trim();
-    if(!name || !room) return alert("Enter details");
+    if(!room) return alert("Enter room name");
 
-    user = name; roomCode = room; isHost = true;
-    saveSession();
+    roomCode = room; isHost = true;
     db.ref("rooms/"+roomCode).set({
         pass: pass, host: user, state: "waiting", winner: "",
         cards: shuffle([...icons, ...icons]),
@@ -79,16 +102,14 @@ function createRoom(){
 }
 
 function joinRoom(){
-    const name = getEl("playerName").value.trim();
     const room = getEl("roomName").value.trim();
     const pass = getEl("roomPass").value.trim();
-    if(!name || !room) return alert("Enter details");
+    if(!room) return alert("Enter room name");
 
-    user = name; roomCode = room; isHost = false;
+    roomCode = room; isHost = false;
     db.ref("rooms/"+roomCode).once("value", s => {
-        if(!s.exists()) return alert("No room");
-        if(s.val().pass !== pass) return alert("Wrong pass");
-        saveSession();
+        if(!s.exists()) return alert("No room found");
+        if(s.val().pass !== pass) return alert("Wrong password");
         db.ref("rooms/"+roomCode+"/players/"+user).update({ score: 0 });
         enterGameScreen();
     });
@@ -103,24 +124,20 @@ function enterGameScreen() {
 
     dbRef.on("value", snapshot => {
         const data = snapshot.val();
-        if(!data) return location.reload();
+        if(!data) return;
 
         const players = data.players || {};
         const pNames = Object.keys(players);
 
-        // FIX: Start game for BOTH if 2 players joined
         if (isHost && data.state === "waiting" && pNames.length === 2) {
             dbRef.update({ state: "playing" });
         }
 
-        // Card Sync
-        const currentCardsStr = JSON.stringify(data.cards);
-        if (currentCardsStr !== lastCardsString) {
-            lastCardsString = currentCardsStr;
+        if (JSON.stringify(data.cards) !== lastCardsString) {
+            lastCardsString = JSON.stringify(data.cards);
             setupLocalBoard(data.cards);
         }
 
-        // State Management
         if (data.state === "waiting") {
             getEl("lobby").classList.remove("hidden");
             getEl("gameArea").classList.add("hidden");
@@ -134,17 +151,24 @@ function enterGameScreen() {
             stopTimer();
             showEndScreen(data.winner);
         }
-
-        // FIX: Dynamic Score & Names
         updateScoresUI(players);
         renderChat(data.chat || {});
     });
 }
 
+// (Remaining game logic remains similar to your original script)
+let lastCardsString = "";
+let localMatched = [];
+let firstCard = null;
+let isLocked = false;
+let myScore = 0;
+let timerInterval = null;
+let seconds = 0;
+
 function setupLocalBoard(cardIcons) {
-    localCards = cardIcons; localMatched = []; firstCard = null; isLocked = false; myScore = 0;
+    localMatched = []; firstCard = null; isLocked = false; myScore = 0;
     const grid = getEl("grid"); grid.innerHTML = "";
-    localCards.forEach((icon, index) => {
+    cardIcons.forEach((icon, index) => {
         const card = document.createElement("div");
         card.className = "card";
         card.onclick = () => handleCardClick(card, icon, index);
@@ -181,8 +205,7 @@ function handleCardClick(cardDiv, icon, index) {
 }
 
 function startTimer() {
-    seconds = 0;
-    clearInterval(timerInterval);
+    seconds = 0; clearInterval(timerInterval);
     timerInterval = setInterval(() => {
         seconds++;
         const m = Math.floor(seconds/60).toString().padStart(2,'0');
@@ -194,11 +217,8 @@ function stopTimer() { clearInterval(timerInterval); timerInterval = null; }
 
 function updateScoresUI(players) {
     Object.entries(players).forEach(([pName, pData]) => {
-        if(pName === user) {
-            getEl("myScoreEl").innerText = `You (${pName}): ${pData.score}`;
-        } else {
-            getEl("opScoreEl").innerText = `${pName}: ${pData.score}`;
-        }
+        if(pName === user) getEl("myScoreEl").innerText = `You: ${pData.score}`;
+        else getEl("opScoreEl").innerText = `${pName}: ${pData.score}`;
     });
 }
 
